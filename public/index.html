@@ -1,33 +1,100 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>DQR Armor Stats</title>
-<style>body{font-family:sans-serif;padding:2rem;background:#111;color:#eee}table{border-collapse:collapse;width:100%}th,td{border:1px solid #444;padding:.5rem;text-align:left}button{background:#333;color:#fff;border:1px solid #666;padding:.2rem .6rem;cursor:pointer}button:hover{background:#444}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DQR Tracker — Item Drops</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0b0e14; color: #e2e8f0; padding: 2rem; }
+  h1 { text-align: center; margin-bottom: 2rem; color: #38bdf8; text-transform: uppercase; letter-spacing: 2px; font-weight: 800; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+  .card { background: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 1.25rem; display: flex; gap: 1rem; align-items: center; transition: transform .2s, border-color .2s; }
+  .card:hover { transform: translateY(-4px); border-color: #38bdf8; }
+  .img-wrap { width: 80px; height: 80px; flex-shrink: 0; border-radius: 12px; overflow: hidden; border: 2px solid #374151; background: #000; }
+  .img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .info { flex: 1; min-width: 0; }
+  .name { font-size: 1.15rem; font-weight: 700; color: #f9fafb; margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .type { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; margin-bottom: 0.5rem; display: block; }
+  .stats { font-size: 0.95rem; color: #d1d5db; margin-bottom: 0.5rem; font-family: 'Courier New', monospace; }
+  .badge { display: inline-block; font-size: 0.75rem; font-weight: 800; padding: 0.15rem 0.5rem; border-radius: 4px; text-transform: uppercase; }
+  .count-badge { background: #1e293b; color: #38bdf8; border: 1px solid #38bdf8; margin-left: auto; }
+  .rarity-common { background: #4b5563; color: #fff; }
+  .rarity-uncommon { background: #22c55e; color: #fff; }
+  .rarity-rare { background: #3b82f6; color: #fff; }
+  .rarity-epic { background: #a855f7; color: #fff; }
+  .rarity-legendary { background: #ef4444; color: #fff; }
+  .empty { text-align: center; color: #64748b; padding: 4rem; font-size: 1.2rem; }
+  .refresh { display: block; margin: 0 auto 2rem; padding: 0.7rem 1.5rem; background: #38bdf8; color: #0f172a; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 1rem; }
+  .refresh:hover { background: #7dd3fc; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+</style>
 </head>
 <body>
-<h2>Dungeon Quest Reborn — Armor Tracker</h2>
-<input id="uid" placeholder="Roblox UserId">
-<button onclick="load()">Load</button>
-<table id="t"><tr><th>Armor</th><th>Rarity</th><th>Count</th><th></th></tr></table>
+<h1>Dungeon Quest Reborn — Item Tracker</h1>
+<button class="refresh" onclick="load()">⟲ Refresh</button>
+<div class="header">
+  <div id="summary"></div>
+</div>
+<div class="grid" id="root"></div>
+
 <script>
-async function load(){
-  const uid = document.getElementById('uid').value;
-  const r = await fetch(`/stats/${uid}`);
-  const d = await r.json();
-  const t = document.getElementById('t');
-  t.innerHTML = '<tr><th>Armor</th><th>Rarity</th><th>Count</th><th></th></tr>';
-  for(const [id,c] of Object.entries(d)){
-    const info = ARMORS.find(a=>a.id===id)||{name:id,rarity:'?'};
-    const row = t.insertRow();
-    row.innerHTML = `<td>${info.name}</td><td>${info.rarity}</td><td>${c}</td><td><button onclick="inc('${uid}','${id}',${c||0})">+1</button></td>`;
+const ITEM_MAP = {};
+
+async function load() {
+  const root = document.getElementById('root');
+  const summary = document.getElementById('summary');
+  root.innerHTML = '<div class="empty">Đang tải...</div>';
+  try {
+    const [itemsRes, statsRes] = await Promise.all([
+      fetch('/items'),
+      fetch('/stats')
+    ]);
+    const items = await itemsRes.json();
+    const allStats = await statsRes.json();
+    items.forEach(it => ITEM_MAP[it.id] = it);
+    root.innerHTML = '';
+    const names = Object.keys(allStats);
+    let totalItems = 0;
+    names.forEach(name => {
+      const playerStats = allStats[name];
+      Object.entries(playerStats).forEach(([itemId, count]) => {
+        totalItems++;
+        const item = ITEM_MAP[itemId] || { name: itemId, type: 'Item', rarity: 'Common', image: '', stats: '' };
+        const card = document.createElement('div');
+        card.className = 'card';
+        const rarityClass = 'rarity-' + (item.rarity || 'common').toLowerCase();
+        card.innerHTML = `
+          <div class="img-wrap">
+            <img src="${escapeHtml(item.image || '')}" alt="${escapeHtml(item.name)}" onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\"width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:10px;\">?</div>'">
+          </div>
+          <div class="info">
+            <div class="type">${escapeHtml(item.type)}</div>
+            <div class="name">${escapeHtml(item.name)}</div>
+            <div class="stats">${escapeHtml(item.stats || '')}</div>
+            <span class="badge ${rarityClass} count-badge">${escapeHtml(item.rarity)} • x${count}</span>
+          </div>
+        `;
+        root.appendChild(card);
+      });
+    });
+    summary.textContent = `${names.length} người chơi · ${totalItems} món đã track`;
+    if (names.length === 0) {
+      root.innerHTML = '<div class="empty">Chưa có dữ liệu tracker nào.</div>';
+      summary.textContent = '';
+    }
+  } catch (e) {
+    root.innerHTML = '<div class="empty">Lỗi tải dữ liệu.</div>';
+    summary.textContent = '';
   }
 }
-async function inc(uid,id,cur){
-  await fetch(`/stats/${uid}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_id:id,value:cur+1})});
-  load();
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
-const ARMORS = [];
+
+load();
 </script>
 </body>
 </html>
