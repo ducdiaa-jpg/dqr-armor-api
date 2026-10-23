@@ -14,21 +14,33 @@ try { stats = JSON.parse(fs.readFileSync(DATA_FILE)); } catch {}
 
 function save() { fs.writeFileSync(DATA_FILE, JSON.stringify(stats, null, 2)); }
 
-const ARMORS = [
-  { id: "iron_plate", name: "Iron Plate", rarity: "Common" },
-  { id: "steel_plate", name: "Steel Plate", rarity: "Uncommon" },
-  { id: "mithril_plate", name: "Mithril Plate", rarity: "Rare" },
-  { id: "dragon_scale", name: "Dragon Scale", rarity: "Epic" },
-  { id: "void_armor", name: "Void Armor", rarity: "Legendary" },
-];
+const ITEMS = {
+  armors: [
+    { id: "iron_plate", name: "Iron Plate", rarity: "Common" },
+    { id: "steel_plate", name: "Steel Plate", rarity: "Uncommon" },
+    { id: "mithril_plate", name: "Mithril Plate", rarity: "Rare" },
+    { id: "dragon_scale", name: "Dragon Scale", rarity: "Epic" },
+    { id: "void_armor", name: "Void Armor", rarity: "Legendary" },
+  ],
+  weapons: [
+    { id: "bronze_dagger", name: "Bronze Dagger", rarity: "Common" },
+    { id: "iron_sword", name: "Iron Sword", rarity: "Common" },
+    { id: "steel_sword", name: "Steel Sword", rarity: "Uncommon" },
+    { id: "mithril_sword", name: "Mithril Sword", rarity: "Rare" },
+    { id: "dragon_blade", name: "Dragon Blade", rarity: "Epic" },
+    { id: "void_reaper", name: "Void Reaper", rarity: "Legendary" },
+  ],
+};
 
-app.get('/armors', (req, res) => res.json(ARMORS));
-app.get('/stats/:uid', (req, res) => res.json(stats[req.params.uid] || {}));
-app.post('/stats/:uid', (req, res) => {
-  const uid = req.params.uid;
+function allItems() { return [...ITEMS.armors, ...ITEMS.weapons]; }
+
+app.get('/items', (req, res) => res.json(allItems()));
+app.get('/stats/:name', (req, res) => res.json(stats[req.params.name] || {}));
+app.post('/stats/:name', (req, res) => {
+  const name = req.params.name;
   const { item_id, value } = req.body;
-  if (!stats[uid]) stats[uid] = {};
-  stats[uid][item_id] = value;
+  if (!stats[name]) stats[name] = {};
+  stats[name][item_id] = value;
   save();
   res.json({ ok: true });
 });
