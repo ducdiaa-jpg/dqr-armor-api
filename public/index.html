@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>DQR Armor Stats</title>
+<style>body{font-family:sans-serif;padding:2rem;background:#111;color:#eee}table{border-collapse:collapse;width:100%}th,td{border:1px solid #444;padding:.5rem;text-align:left}button{background:#333;color:#fff;border:1px solid #666;padding:.2rem .6rem;cursor:pointer}button:hover{background:#444}</style>
+</head>
+<body>
+<h2>Dungeon Quest Reborn — Armor Tracker</h2>
+<input id="uid" placeholder="Roblox UserId">
+<button onclick="load()">Load</button>
+<table id="t"><tr><th>Armor</th><th>Rarity</th><th>Count</th><th></th></tr></table>
+<script>
+async function load(){
+  const uid = document.getElementById('uid').value;
+  const r = await fetch(`/stats/${uid}`);
+  const d = await r.json();
+  const t = document.getElementById('t');
+  t.innerHTML = '<tr><th>Armor</th><th>Rarity</th><th>Count</th><th></th></tr>';
+  for(const [id,c] of Object.entries(d)){
+    const info = ARMORS.find(a=>a.id===id)||{name:id,rarity:'?'};
+    const row = t.insertRow();
+    row.innerHTML = `<td>${info.name}</td><td>${info.rarity}</td><td>${c}</td><td><button onclick="inc('${uid}','${id}',${c||0})">+1</button></td>`;
+  }
+}
+async function inc(uid,id,cur){
+  await fetch(`/stats/${uid}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_id:id,value:cur+1})});
+  load();
+}
+const ARMORS = [];
+</script>
+</body>
+</html>
